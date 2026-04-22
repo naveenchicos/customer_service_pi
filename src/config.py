@@ -97,4 +97,4 @@ def get_settings() -> Settings:
     lru_cache ensures the .env file is read only once per process.
     In tests, call get_settings.cache_clear() before overriding env vars.
     """
-    return Settings()
+    return Settings()  # type: ignore[call-arg]
