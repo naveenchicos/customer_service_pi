@@ -5,12 +5,12 @@
 #     projects/pi-dev-ai-493823/serviceAccounts/pi-ai-dev-engineer@pi-dev-ai-493823.iam.gserviceaccount.com
 #
 # IAM bindings — import each individually:
+#   terraform import google_project_iam_member.dev_engineer_artifact_admin \
+#     "pi-dev-ai-493823 roles/artifactregistry.admin serviceAccount:pi-ai-dev-engineer@pi-dev-ai-493823.iam.gserviceaccount.com"
 #   terraform import google_project_iam_member.dev_engineer_cloudsql_editor \
 #     "pi-dev-ai-493823 roles/cloudsql.editor serviceAccount:pi-ai-dev-engineer@pi-dev-ai-493823.iam.gserviceaccount.com"
-#   terraform import google_project_iam_member.dev_engineer_artifact_writer \
-#     "pi-dev-ai-493823 roles/artifactregistry.writer serviceAccount:pi-ai-dev-engineer@pi-dev-ai-493823.iam.gserviceaccount.com"
-#   terraform import google_project_iam_member.dev_engineer_container_developer \
-#     "pi-dev-ai-493823 roles/container.developer serviceAccount:pi-ai-dev-engineer@pi-dev-ai-493823.iam.gserviceaccount.com"
+#   terraform import google_project_iam_member.dev_engineer_container_admin \
+#     "pi-dev-ai-493823 roles/container.admin serviceAccount:pi-ai-dev-engineer@pi-dev-ai-493823.iam.gserviceaccount.com"
 
 resource "google_service_account" "dev_engineer" {
   account_id   = "pi-ai-dev-engineer"
@@ -19,9 +19,9 @@ resource "google_service_account" "dev_engineer" {
 }
 
 # Deploy images to Artifact Registry
-resource "google_project_iam_member" "dev_engineer_artifact_writer" {
+resource "google_project_iam_member" "dev_engineer_artifact_admin" {
   project = var.project_id
-  role    = "roles/artifactregistry.writer"
+  role    = "roles/artifactregistry.admin"
   member  = "serviceAccount:${google_service_account.dev_engineer.email}"
 }
 
@@ -33,8 +33,8 @@ resource "google_project_iam_member" "dev_engineer_cloudsql_editor" {
 }
 
 # kubectl set image / rollout status from CI/CD
-resource "google_project_iam_member" "dev_engineer_container_developer" {
+resource "google_project_iam_member" "dev_engineer_container_admin" {
   project = var.project_id
-  role    = "roles/container.developer"
+  role    = "roles/container.admin"
   member  = "serviceAccount:${google_service_account.dev_engineer.email}"
 }
