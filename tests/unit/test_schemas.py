@@ -15,6 +15,7 @@ from src.models.account import AccountStatus
 
 # ── AccountCreate ─────────────────────────────────────────────────────────────
 
+
 class TestAccountCreate:
     def _valid(self, **overrides) -> dict:
         base = {
@@ -37,7 +38,9 @@ class TestAccountCreate:
 
     def test_customer_number_rejects_special_chars(self):
         with pytest.raises(ValidationError, match="customer_number"):
-            AccountCreate(**self._valid(customer_number="CUST 001; DROP TABLE accounts--"))
+            AccountCreate(
+                **self._valid(customer_number="CUST 001; DROP TABLE accounts--")
+            )
 
     def test_customer_number_too_short(self):
         with pytest.raises(ValidationError):
@@ -81,6 +84,7 @@ class TestAccountCreate:
 
 # ── AccountUpdate ─────────────────────────────────────────────────────────────
 
+
 class TestAccountUpdate:
     def test_all_fields_optional(self):
         update = AccountUpdate()
@@ -98,7 +102,11 @@ class TestAccountUpdate:
             AccountUpdate(status="deleted")
 
     def test_valid_status_values(self):
-        for s in [AccountStatus.ACTIVE, AccountStatus.INACTIVE, AccountStatus.SUSPENDED]:
+        for s in [
+            AccountStatus.ACTIVE,
+            AccountStatus.INACTIVE,
+            AccountStatus.SUSPENDED,
+        ]:
             update = AccountUpdate(status=s)
             assert update.status == s
 

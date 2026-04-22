@@ -27,6 +27,7 @@ _CUSTOMER_NUMBER_RE = re.compile(r"^[A-Za-z0-9\-]{3,50}$")
 
 # ── Request schemas ───────────────────────────────────────────────────────────
 
+
 class AccountCreate(BaseModel):
     """Payload for POST /accounts."""
 
@@ -138,6 +139,7 @@ class AccountUpdate(BaseModel):
 
 # ── Response schemas ──────────────────────────────────────────────────────────
 
+
 class AccountResponse(BaseModel):
     """Full account representation returned by all read/write endpoints."""
 
@@ -172,6 +174,7 @@ class AccountSummary(BaseModel):
 
 # ── Pagination ────────────────────────────────────────────────────────────────
 
+
 class PaginatedAccounts(BaseModel):
     """Envelope for paginated list responses."""
 
@@ -184,10 +187,13 @@ class PaginatedAccounts(BaseModel):
 
 # ── Error schema ──────────────────────────────────────────────────────────────
 
+
 class ErrorDetail(BaseModel):
     """Standard error response envelope — never exposes internal stack traces."""
 
-    code: str = Field(description="Machine-readable error code", examples=["ACCOUNT_NOT_FOUND"])
+    code: str = Field(
+        description="Machine-readable error code", examples=["ACCOUNT_NOT_FOUND"]
+    )
     message: str = Field(description="Human-readable error description")
     correlation_id: str | None = Field(
         default=None,

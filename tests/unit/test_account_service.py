@@ -38,6 +38,7 @@ def _mock_account(**kwargs) -> Account:
 
 # ── create_account ────────────────────────────────────────────────────────────
 
+
 class TestCreateAccount:
     @pytest.mark.asyncio
     async def test_email_normalised_to_lowercase(self):
@@ -95,6 +96,7 @@ class TestCreateAccount:
 
 # ── get_account_by_id ─────────────────────────────────────────────────────────
 
+
 class TestGetAccountById:
     @pytest.mark.asyncio
     async def test_returns_account_when_found(self):
@@ -120,6 +122,7 @@ class TestGetAccountById:
 
 
 # ── update_account ────────────────────────────────────────────────────────────
+
 
 class TestUpdateAccount:
     @pytest.mark.asyncio
@@ -160,6 +163,7 @@ class TestUpdateAccount:
 
 # ── deactivate_account ────────────────────────────────────────────────────────
 
+
 class TestDeactivateAccount:
     @pytest.mark.asyncio
     async def test_raises_not_found_when_id_missing(self):
@@ -173,6 +177,7 @@ class TestDeactivateAccount:
 
 
 # ── search_accounts ───────────────────────────────────────────────────────────
+
 
 class TestSearchAccounts:
     @pytest.mark.asyncio

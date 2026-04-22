@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 
 # ── Create ────────────────────────────────────────────────────────────────────
 
+
 async def create_account(
     db: AsyncSession,
     payload: AccountCreate,
@@ -67,6 +68,7 @@ async def create_account(
 
 # ── Read ──────────────────────────────────────────────────────────────────────
 
+
 async def get_account_by_id(db: AsyncSession, account_id: uuid.UUID) -> Account:
     """
     Fetch a single account by internal UUID.
@@ -91,9 +93,7 @@ async def get_account_by_customer_number(
     Raises:
         ValueError("ACCOUNT_NOT_FOUND") when not found.
     """
-    stmt = select(Account).where(
-        Account.customer_number == customer_number.upper()
-    )
+    stmt = select(Account).where(Account.customer_number == customer_number.upper())
     result = await db.execute(stmt)
     account = result.scalar_one_or_none()
     if account is None:
@@ -143,10 +143,7 @@ async def search_accounts(
     total = total_result.scalar_one()
 
     base_stmt = (
-        base_stmt
-        .order_by(Account.created_at.desc())
-        .offset(offset)
-        .limit(page_size)
+        base_stmt.order_by(Account.created_at.desc()).offset(offset).limit(page_size)
     )
     rows = await db.execute(base_stmt)
     accounts = list(rows.scalars().all())
@@ -155,6 +152,7 @@ async def search_accounts(
 
 
 # ── Update ────────────────────────────────────────────────────────────────────
+
 
 async def update_account(
     db: AsyncSession,
@@ -199,6 +197,7 @@ async def update_account(
 
 # ── Soft delete ───────────────────────────────────────────────────────────────
 
+
 async def deactivate_account(
     db: AsyncSession,
     account_id: uuid.UUID,
@@ -225,6 +224,7 @@ async def deactivate_account(
 
 
 # ── Enrichment ────────────────────────────────────────────────────────────────
+
 
 async def get_account_with_customer_details(
     db: AsyncSession,

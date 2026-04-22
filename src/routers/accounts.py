@@ -56,6 +56,7 @@ def _http_exc(request: Request, code: str, message: str | None = None) -> HTTPEx
 
 # ── POST /accounts ─────────────────────────────────────────────────────────
 
+
 @router.post(
     "",
     response_model=AccountResponse,
@@ -63,7 +64,10 @@ def _http_exc(request: Request, code: str, message: str | None = None) -> HTTPEx
     summary="Create a new account",
     response_description="The newly created account",
     responses={
-        409: {"model": ErrorDetail, "description": "Customer number or email already exists"},
+        409: {
+            "model": ErrorDetail,
+            "description": "Customer number or email already exists",
+        },
         422: {"model": ErrorDetail, "description": "Validation error in request body"},
     },
 )
@@ -81,13 +85,16 @@ async def create_account(
     """
     caller = request.headers.get("X-Caller-Identity")
     try:
-        account = await account_service.create_account(db, payload, caller_identity=caller)
+        account = await account_service.create_account(
+            db, payload, caller_identity=caller
+        )
     except ValueError as exc:
         raise _http_exc(request, str(exc)) from exc
     return AccountResponse.model_validate(account)
 
 
 # ── GET /accounts ──────────────────────────────────────────────────────────
+
 
 @router.get(
     "",
@@ -112,7 +119,9 @@ async def list_accounts(
         description="Filter by account status",
     ),
     page: int = Query(default=1, ge=1, description="Page number (1-based)"),
-    page_size: int = Query(default=20, ge=1, le=100, description="Items per page (max 100)"),
+    page_size: int = Query(
+        default=20, ge=1, le=100, description="Items per page (max 100)"
+    ),
     db: AsyncSession = Depends(get_db),
 ) -> PaginatedAccounts:
     """
@@ -136,6 +145,7 @@ async def list_accounts(
 
 
 # ── GET /accounts/{account_id} ─────────────────────────────────────────────
+
 
 @router.get(
     "/{account_id}",
@@ -165,6 +175,7 @@ async def get_account(
 
 # ── GET /accounts/by-customer/{customer_number} ────────────────────────────
 
+
 @router.get(
     "/by-customer/{customer_number}",
     response_model=AccountResponse,
@@ -185,13 +196,16 @@ async def get_account_by_customer_number(
     Customer numbers are case-insensitive; `CUST-001` and `cust-001` resolve to the same account.
     """
     try:
-        account = await account_service.get_account_by_customer_number(db, customer_number)
+        account = await account_service.get_account_by_customer_number(
+            db, customer_number
+        )
     except ValueError as exc:
         raise _http_exc(request, str(exc)) from exc
     return AccountResponse.model_validate(account)
 
 
 # ── PATCH /accounts/{account_id} ───────────────────────────────────────────
+
 
 @router.patch(
     "/{account_id}",
@@ -200,7 +214,10 @@ async def get_account_by_customer_number(
     response_description="Updated account",
     responses={
         404: {"model": ErrorDetail, "description": "Account not found"},
-        409: {"model": ErrorDetail, "description": "Email already in use by another account"},
+        409: {
+            "model": ErrorDetail,
+            "description": "Email already in use by another account",
+        },
         422: {"model": ErrorDetail, "description": "No updatable fields provided"},
     },
 )
@@ -227,6 +244,7 @@ async def update_account(
 
 
 # ── DELETE /accounts/{account_id} ──────────────────────────────────────────
+
 
 @router.delete(
     "/{account_id}",

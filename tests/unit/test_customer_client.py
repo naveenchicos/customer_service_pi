@@ -47,7 +47,10 @@ class TestGetCustomer:
     async def test_returns_parsed_json_on_success(self, mock_client):
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {"customer_number": "CUST-001", "name": "Jane"}
+        mock_response.json.return_value = {
+            "customer_number": "CUST-001",
+            "name": "Jane",
+        }
         mock_client.get = AsyncMock(return_value=mock_response)
 
         result = await cc.get_customer("CUST-001")

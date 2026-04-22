@@ -58,11 +58,15 @@ logger = logging.getLogger(__name__)
 
 # ── Lifespan (startup / shutdown) ─────────────────────────────────────────────
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):  # type: ignore[type-arg]
     logger.info(
         "Starting up",
-        extra={"environment": settings.environment, "version": settings.service_version},
+        extra={
+            "environment": settings.environment,
+            "version": settings.service_version,
+        },
     )
     await init_customer_client()
     yield
@@ -71,6 +75,7 @@ async def lifespan(app: FastAPI):  # type: ignore[type-arg]
 
 
 # ── App factory ───────────────────────────────────────────────────────────────
+
 
 def create_app() -> FastAPI:
     is_production = settings.environment == Environment.PRODUCTION
@@ -112,7 +117,12 @@ def create_app() -> FastAPI:
         allow_origins=[],  # no browser-based cross-origin access
         allow_credentials=False,
         allow_methods=["GET", "POST", "PATCH", "DELETE"],
-        allow_headers=["X-API-Key", "X-Correlation-ID", "X-Caller-Identity", "Content-Type"],
+        allow_headers=[
+            "X-API-Key",
+            "X-Correlation-ID",
+            "X-Caller-Identity",
+            "Content-Type",
+        ],
     )
 
     # ── Routers ───────────────────────────────────────────────────────────────
