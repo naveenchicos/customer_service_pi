@@ -132,7 +132,9 @@ jobs:
             --for=condition=Ready --timeout=60s
           POD=$(kubectl get pod -n production -l app=ol-service \
             --field-selector=status.phase=Running \
-            -o jsonpath='{.items[0].metadata.name}')
+            --sort-by=.metadata.creationTimestamp \
+            -o jsonpath='{.items[-1].metadata.name}')
+          echo "Selected pod: $POD"
           RESULT=$(kubectl exec -n production "$POD" -c ol-service -- \
             python3 -c "import urllib.request,json; print(json.loads(urllib.request.urlopen('http://localhost:8000/health').read())['status'])")
           echo "Health status: $RESULT"
