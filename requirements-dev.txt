@@ -1,0 +1,16 @@
+-r requirements.txt
+
+# Testing
+pytest==8.3.4
+pytest-asyncio==0.24.0
+pytest-cov==6.0.0
+httpx==0.28.0        # also used as async test client
+anyio==4.7.0
+
+# Linting & formatting
+black==24.10.0
+flake8==7.1.1
+mypy==1.13.0
+
+# Type stubs
+types-python-dateutil==2.9.0.20241206

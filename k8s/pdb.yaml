@@ -1,0 +1,13 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: ol-service-pdb
+  namespace: production
+spec:
+  # Ensures at least 2 pods remain available during voluntary disruptions
+  # (node upgrades, cluster maintenance). With minReplicas=3 in HPA this
+  # allows one pod to be evicted at a time.
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: ol-service

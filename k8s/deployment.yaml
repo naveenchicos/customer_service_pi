@@ -1,0 +1,142 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ol-service
+  namespace: production
+  labels:
+    app: ol-service
+    version: "1.0.0"
+spec:
+  replicas: 3  # HPA manages scaling; never drop below 3
+  selector:
+    matchLabels:
+      app: ol-service
+  template:
+    metadata:
+      labels:
+        app: ol-service
+    spec:
+      # ── Pod-level security context (OWASP A05) ────────────────────────────
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+
+      containers:
+        # ── Application container ─────────────────────────────────────────
+        - name: ol-service
+          image: us-central1-docker.pkg.dev/pi-dev-ai-493823/pydevrepo/ol-service:v1.0.0
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+              name: http
+              protocol: TCP
+
+          env:
+            - name: ENVIRONMENT
+              value: "production"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: ol-service-secrets
+                  key: database-url
+            - name: CUSTOMER_SERVICE_URL
+              value: "http://customer-service.production.svc.cluster.local"
+            - name: API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ol-service-secrets
+                  key: api-key
+            - name: LOG_LEVEL
+              value: "INFO"
+            - name: CIRCUIT_BREAKER_THRESHOLD
+              value: "5"
+            - name: CIRCUIT_BREAKER_RECOVERY
+              value: "30"
+
+          # Container-level security (OWASP A05)
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 2
+
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp  # required when readOnlyRootFilesystem: true
+
+        # ── Cloud SQL Auth Proxy sidecar ──────────────────────────────────
+        # Encrypted tunnel to Cloud SQL on localhost:5432.
+        # Never connect to Cloud SQL directly — always via this proxy.
+        # Troubleshoot: kubectl logs POD_NAME -c cloud-sql-proxy -n production
+        - name: cloud-sql-proxy
+          image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.14.0
+          args:
+            - "--structured-logs"
+            - "--port=5432"
+            - "pi-dev-ai-493823:us-central1:py-dev-ai"
+          env:
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: /secrets/cloudsql/key.json
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 65532  # nonroot UID in distroless base image
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
+          volumeMounts:
+            - name: cloud-sql-sa-key
+              mountPath: /secrets/cloudsql
+              readOnly: true
+
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: cloud-sql-sa-key
+          secret:
+            secretName: cloud-sql-sa-key
+
+      # Spread pods across availability zones for resilience
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: ol-service

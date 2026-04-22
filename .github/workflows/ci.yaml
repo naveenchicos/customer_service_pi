@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "staging"]
+  pull_request:
+    branches: ["main", "staging"]
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  lint-and-test:
+    name: Lint, type-check, and test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Lint (flake8)
+        run: flake8 src/ tests/
+
+      - name: Format check (black)
+        run: black --check src/ tests/
+
+      - name: Type check (mypy)
+        run: mypy src/
+
+      - name: Run unit tests
+        env:
+          # Minimal env vars so config.py can be imported without a real DB
+          DATABASE_URL: "postgresql+asyncpg://user:pass@localhost:5432/test_db"
+          CUSTOMER_SERVICE_URL: "http://customer-service.test.svc.cluster.local"
+          API_KEY: "test-api-key-for-ci"
+          ENVIRONMENT: "local"
+        run: |
+          pytest tests/unit/ \
+            --cov=src \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            -v
+
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          files: coverage.xml
+          fail_ci_if_error: false

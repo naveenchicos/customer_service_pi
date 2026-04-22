@@ -1,0 +1,55 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ol-service-route
+  namespace: production
+spec:
+  parentRefs:
+    - name: ol-gateway
+      namespace: production
+
+  hostnames:
+    - "api.your-domain.com"  # replace with actual domain
+
+  rules:
+    # ── Health check route — no timeout, no auth, no retry ────────────────
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /health
+      backendRefs:
+        - name: ol-service
+          port: 80
+          weight: 100
+
+    # ── Main API route ─────────────────────────────────────────────────────
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      timeouts:
+        request: "3s"         # total client wait — returns 504 after this
+        backendRequest: "2s"  # time this service has to respond; must be < request
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            add:
+              - name: X-Gateway
+                value: gke-gateway-api
+      backendRefs:
+        - name: ol-service         # stable backend (production)
+          port: 80
+          weight: 100
+        - name: ol-service-canary  # canary backend — set weight: 0 when not in use
+          port: 80
+          weight: 0
+      # Retry only on transient errors — never on 500 (application errors)
+      # Retrying 500s on an overloaded service makes things worse, not better
+      retry:
+        attempts: 2
+        perTryTimeout: "1500ms"
+        retryOn:
+          - "503"             # Service Unavailable (pod not ready)
+          - "504"             # Gateway Timeout
+          - "connection-error"
+          - "reset"
