@@ -35,11 +35,18 @@ terraform init
 Run each import command to bring existing GCP resources under Terraform management
 without destroying and recreating them:
 
-```bash
-# GKE cluster
-terraform import google_container_cluster.ol_cluster \
-  projects/pi-dev-ai-493823/locations/us-central1/clusters/ol-cluster
+> **Permission requirements:** Some imports require elevated GCP roles.
+> The identity running Terraform needs:
+>
+> - `roles/compute.viewer` (or `container.admin`) for the GKE cluster import
+> - `roles/iam.serviceAccountAdmin` for the service account import
+> - `roles/resourcemanager.projectIamAdmin` + Cloud Resource Manager API enabled for IAM binding imports
+>
+> If these permissions are unavailable, skip those imports and let `terraform apply` create the
+> resources — **but never apply GKE cluster creation against an existing cluster**; it will be
+> skipped if already present or will error. Import the cluster first when permissions allow.
 
+```bash
 # Cloud SQL instance
 terraform import google_sql_database_instance.py_dev_ai \
   projects/pi-dev-ai-493823/instances/py-dev-ai
@@ -56,11 +63,15 @@ terraform import google_sql_user.app_user \
 terraform import google_artifact_registry_repository.pydevrepo \
   projects/pi-dev-ai-493823/locations/us-central1/repositories/pydevrepo
 
-# Service account
+# GKE cluster (requires roles/compute.viewer or higher)
+terraform import google_container_cluster.ol_cluster \
+  projects/pi-dev-ai-493823/locations/us-central1/clusters/ol-cluster
+
+# Service account (requires roles/iam.serviceAccountAdmin)
 terraform import google_service_account.dev_engineer \
   projects/pi-dev-ai-493823/serviceAccounts/pi-ai-dev-engineer@pi-dev-ai-493823.iam.gserviceaccount.com
 
-# IAM bindings
+# IAM bindings (requires Cloud Resource Manager API + roles/resourcemanager.projectIamAdmin)
 terraform import google_project_iam_member.dev_engineer_artifact_writer \
   "pi-dev-ai-493823 roles/artifactregistry.writer serviceAccount:pi-ai-dev-engineer@pi-dev-ai-493823.iam.gserviceaccount.com"
 

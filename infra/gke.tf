@@ -17,23 +17,11 @@ resource "google_container_cluster" "ol_cluster" {
   # deletion_protection prevents accidental `terraform destroy` in production.
   deletion_protection = true
 
-  addons_config {
-    dns_cache_config {
-      enabled = true
-    }
-    gce_persistent_disk_csi_driver_config {
-      enabled = true
-    }
-    gcs_fuse_csi_driver_config {
-      enabled = true
-    }
-  }
+  # Autopilot manages addons, release channel, and VPA automatically.
+  # Do not configure addons_config, release_channel, or vertical_pod_autoscaling
+  # blocks — they conflict with enable_autopilot = true.
 
   release_channel {
     channel = "REGULAR"
-  }
-
-  vertical_pod_autoscaling {
-    enabled = true
   }
 }

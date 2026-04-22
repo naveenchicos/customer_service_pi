@@ -29,6 +29,8 @@ resource "google_sql_database_instance" "py_dev_ai" {
     disk_size             = 100
     disk_autoresize       = false
 
+    enable_dataplex_integration = true
+
     location_preference {
       zone = "us-central1-a"
     }
