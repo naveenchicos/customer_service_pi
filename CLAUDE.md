@@ -13,7 +13,7 @@ Account management service: create/update accounts, look up by customer number o
 - **Database:** PostgreSQL 15 via Cloud SQL (Auth Proxy on `localhost:5432`)
 - **Gateway:** Apigee (external) → GKE Gateway API (internal) → this service
 - **Downstream:** Customer Service (GKE, 500ms timeout), Algolia (2s timeout)
-- **Registry:** Google Artifact Registry (`us-central1-docker.pkg.dev/PROJECT_ID/ol-repo`)
+- **Registry:** Google Artifact Registry (`us-central1-docker.pkg.dev/pi-dev-ai-493823/pydevrepo`)
 - **IaC:** Terraform in `infra/`
 
 ## Commands
@@ -55,8 +55,8 @@ with open('docs/openapi.json','w') as f: json.dump(create_app().openapi(), f, in
 "
 
 # Deploy (see Skills section)
-docker build -t us-central1-docker.pkg.dev/PROJECT_ID/ol-repo/ol-service:TAG .
-docker push us-central1-docker.pkg.dev/PROJECT_ID/ol-repo/ol-service:TAG
+docker build -t us-central1-docker.pkg.dev/pi-dev-ai-493823/pydevrepo/ol-service:TAG .
+docker push us-central1-docker.pkg.dev/pi-dev-ai-493823/pydevrepo/ol-service:TAG
 kubectl apply -f k8s/ -n production
 kubectl rollout status deployment/ol-service -n production --timeout=3m
 ```
@@ -167,6 +167,16 @@ SQLAlchemy `Mapped[X | None]` annotations break on Python 3.14 due to a `Union._
 ## Gotchas
 
 - **Cloud SQL:** Always connect via Auth Proxy sidecar — never direct IP. Sidecar listens on `localhost:5432`. If pods fail to start, check: `kubectl logs POD_NAME -c cloud-sql-proxy -n production`
+- **Cloud SQL Auth Proxy — GKE auth:** The proxy uses Application Default Credentials. Without Workload Identity, ADC resolves to the node compute SA which has no Cloud SQL access. Fix: mount SA key as K8s Secret (`cloud-sql-sa-key`) and set `GOOGLE_APPLICATION_CREDENTIALS=/secrets/cloudsql/key.json` on the proxy container. Diagnosis: `kubectl logs POD -c cloud-sql-proxy -n production` — a 403 `NOT_AUTHORIZED` means wrong credentials, not a network issue.
+- **Alembic migrations on GKE:** Run inside a pod, not locally against Cloud SQL: `kubectl exec -n production $(kubectl get pod -n production -l app=ol-service -o jsonpath='{.items[0].metadata.name}') -c ol-service -- alembic upgrade head`
+- **Artifact Registry repo name:** The actual repo is `pydevrepo` (not `ol-repo`). Full image path: `us-central1-docker.pkg.dev/pi-dev-ai-493823/pydevrepo/ol-service:TAG`
+- **Docker credential helper:** If `docker build` fails with `docker-credential-gcr: executable file not found`, check `~/.docker/config.json`. The entry `"https://index.docker.io/v1/": "gcr"` is wrong — change to `"desktop"`.
+- **CI/CD — flake8 line length:** Default is 79. Project uses 100 (`setup.cfg`). Always run `flake8 src/ tests/` and `black src/ tests/` locally before pushing.
+- **CI/CD — mypy + Pydantic Settings:** `get_settings()` returns `Settings()` which mypy flags as missing required args. Suppress with `# type: ignore[call-arg]` — Pydantic reads from env vars, not constructor args.
+- **CI/CD — mypy + circuitbreaker:** `circuitbreaker` has no type stubs. Suppressed in `setup.cfg` under `[mypy-circuitbreaker.*] ignore_missing_imports = True`.
+- **CI/CD smoke test — old pods:** After a rollout, `kubectl exec` can hit a Terminating/Failed pod from the old ReplicaSet. Always select the newest pod: `--sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1].metadata.name}'`
+- **Workload Identity Federation:** Creating a WIF pool requires `roles/iam.workloadIdentityPoolAdmin` (project owner level). The `pi-ai-dev-engineer` SA cannot do this. Current workaround: `GCP_SA_KEY` GitHub secret with SA JSON key. Migrate to WIF when project owner access is available.
+- **GKE Gateway requires a real domain:** `k8s/gateway.yaml` provisions a GCP load balancer with managed TLS. It will not work with fake domains (no DNS verification). Apply only after a real domain is pointed at the load balancer IP.
 - **Apigee Spike Arrest:** 500 req/s. If traffic exceeds this, tune Apigee first — do not scale GKE pods.
 - **Namespace:** Production = `production`, staging = `staging`. Always verify before applying: `kubectl config current-context`
 - **Circuit breakers:** If a breaker is open, check `GET /health/dependencies` before restarting pods.
