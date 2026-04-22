@@ -11,12 +11,10 @@ An open circuit breaker here means the downstream is struggling, not this servic
 
 import logging
 
-from circuitbreaker import CircuitBreakerError
 from fastapi import APIRouter
 from pydantic import BaseModel
 
 from src.clients import customer_client
-from src.config import get_settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/health", tags=["Health"])

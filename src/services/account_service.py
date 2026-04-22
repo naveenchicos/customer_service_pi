@@ -13,7 +13,6 @@ Error codes used in HTTPException detail:
 
 import logging
 import uuid
-from math import ceil
 
 from sqlalchemy import func, or_, select, update
 from sqlalchemy.exc import IntegrityError

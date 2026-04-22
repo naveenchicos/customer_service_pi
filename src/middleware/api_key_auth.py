@@ -53,7 +53,7 @@ class ApiKeyAuthMiddleware(BaseHTTPMiddleware):
                     "correlation_id": getattr(request.state, "correlation_id", None),
                 },
                 headers={
-                    "WWW-Authenticate": f'ApiKey realm="customer-service-pi"',
+                    "WWW-Authenticate": 'ApiKey realm="customer-service-pi"',
                     "X-Correlation-ID": getattr(request.state, "correlation_id", ""),
                 },
             )

@@ -17,7 +17,6 @@ OpenAPI docs are disabled in production (OWASP A05).
 import logging
 import logging.config
 from contextlib import asynccontextmanager
-from typing import Any
 
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
@@ -83,7 +82,8 @@ def create_app() -> FastAPI:
             "## Authentication\n"
             "All endpoints (except `/health`) require an `X-API-Key` header.\n\n"
             "## Pagination\n"
-            "`GET /accounts` returns paginated results. Use `page` and `page_size` query params.\n\n"
+            "`GET /accounts` returns paginated results. "
+            "Use `page` and `page_size` query params.\n\n"
             "## Correlation IDs\n"
             "Every request and response carries an `X-Correlation-ID` header. "
             "Include this value when raising support tickets or searching logs."
