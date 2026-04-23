@@ -73,7 +73,7 @@ src/
   middleware/
     correlation_id.py   # Injects X-Correlation-ID on every request (generates if absent)
     security_headers.py # OWASP A05 headers: CSP, HSTS, X-Frame-Options, etc.
-    api_key_auth.py     # OWASP A07: constant-time X-API-Key validation; /health exempt
+    caller_identity_auth.py  # Production: requires X-Caller-Identity (set by Apigee); local/staging: X-API-Key fallback
   models/
     account.py          # SQLAlchemy ORM — accounts table, UUID PK, soft-delete via status
   schemas/
@@ -91,7 +91,7 @@ src/
 
 ```text
 Apigee → GKE Gateway (3s timeout) → CorrelationIdMiddleware → SecurityHeadersMiddleware
-  → ApiKeyAuthMiddleware → Router → Service → DB (Cloud SQL via Auth Proxy)
+  → CallerIdentityMiddleware → Router → Service → DB (Cloud SQL via Auth Proxy)
                                              ↘ Customer Service client (500ms, circuit breaker)
 ```
 
@@ -118,7 +118,7 @@ Interactive docs available at `/docs` in `local` and `staging` environments only
 | A01 Broken Access Control | UUID PKs (no sequential IDs); soft-delete preserves audit trail |
 | A03 Injection | Pydantic field validators (regex, length bounds, control-char check); SQLAlchemy ORM parameterised queries |
 | A05 Security Misconfiguration | `SecurityHeadersMiddleware` (CSP, HSTS, X-Frame-Options, nosniff); `/docs` disabled in production; non-root container user; `readOnlyRootFilesystem: true` in K8s |
-| A07 Auth Failures | `ApiKeyAuthMiddleware` with `hmac.compare_digest` (timing-safe); `SecretStr` in config |
+| A07 Auth Failures | `CallerIdentityMiddleware` — production enforces `X-Caller-Identity` (Apigee-injected); local/staging uses `hmac.compare_digest` X-API-Key fallback; `SecretStr` in config |
 | A09 Logging Failures | Structured JSON logs; `X-Correlation-ID` on every request; stack traces logged server-side only, never in responses |
 
 ### Client / resilience pattern
