@@ -1,9 +1,10 @@
 name: CD
 
+# Triggered when a release/* branch is pushed.
+# Flow: test → build → deploy production (manual gate) → merge release/* → main → tag.
 on:
   push:
-    branches: ["main"]       # production deploy
-    tags: ["v*"]             # explicit version tags also trigger
+    branches: ["release/*"]
 
 env:
   PYTHON_VERSION: "3.12"
@@ -66,8 +67,8 @@ jobs:
             type=semver,pattern={{version}}
 
       # Derive the SHA tag explicitly — docker/metadata-action outputs.version
-      # returns the branch name ("main") for branch pushes, not the sha tag.
-      # Using a unique sha tag guarantees kubectl set image triggers a rollout.
+      # returns the branch name for branch pushes, not the sha tag.
+      # A unique sha tag guarantees kubectl set image triggers a rollout.
       - name: Set deploy tag
         id: deploy_tag
         run: echo "value=sha-$(echo '${{ github.sha }}' | cut -c1-7)" >> $GITHUB_OUTPUT
@@ -85,12 +86,11 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ── Job 3: Deploy to production (main branch only) ───────────────────────
+  # ── Job 3: Deploy to production ───────────────────────────────────────────
   deploy-production:
     name: Deploy to production
     runs-on: ubuntu-latest
     needs: build-push
-    if: github.ref == 'refs/heads/main'
     environment: production  # requires manual approval in GitHub Environments
 
     permissions:
@@ -147,49 +147,46 @@ jobs:
           echo "Health status: $RESULT"
           test "$RESULT" = "ok"
 
-      - name: Notify on failure — rollback
+      - name: Rollback on failure
         if: failure()
         run: |
           echo "Deployment failed — rolling back"
           kubectl rollout undo deployment/ol-service -n production
           kubectl rollout status deployment/ol-service -n production --timeout=2m
 
-  # ── Job 4: Deploy to staging (staging branch) ────────────────────────────
-  deploy-staging:
-    name: Deploy to staging
+  # ── Job 4: Merge release branch → main and create version tag ─────────────
+  merge-to-main:
+    name: Merge release to main and tag
     runs-on: ubuntu-latest
-    needs: build-push
-    if: github.ref == 'refs/heads/staging'
+    needs: deploy-production
 
     permissions:
-      contents: read
-      id-token: write
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Get GKE credentials
-        uses: google-github-actions/get-gke-credentials@v2
-        with:
-          cluster_name: ${{ env.GKE_CLUSTER }}
-          location: ${{ env.GKE_REGION }}
-
-      # Staging uses X-API-Key auth (no Apigee in front).
-      # Ensure ol-service-secrets in the staging namespace contains api-key.
-      - name: Update deployment image tag
+      - name: Extract version from branch name
+        id: version
         run: |
-          IMAGE_TAG=${{ needs.build-push.outputs.image_tag }}
-          kubectl set image deployment/ol-service \
-            ol-service=${{ env.IMAGE }}:${IMAGE_TAG} \
-            -n staging
+          BRANCH="${GITHUB_REF#refs/heads/}"
+          VERSION="${BRANCH#release/}"
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Wait for rollout
+      - name: Merge release branch into main
         run: |
-          kubectl rollout status deployment/ol-service \
-            -n staging \
-            --timeout=3m
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout main
+          git merge --no-ff origin/${{ steps.version.outputs.branch }} \
+            -m "chore: merge ${{ steps.version.outputs.branch }} into main"
+          git push origin main
+
+      - name: Create version tag on main
+        run: |
+          git tag ${{ steps.version.outputs.version }}
+          git push origin ${{ steps.version.outputs.version }}

@@ -1,10 +1,11 @@
 name: CI
 
+# Runs on every PR targeting develop.
+# CD triggers separately on release/* branches — never on develop directly.
 on:
-  push:
-    branches: ["main", "staging"]
   pull_request:
-    branches: ["main", "staging"]
+    branches: ["develop"]
+    types: [opened, synchronize, reopened]
 
 env:
   PYTHON_VERSION: "3.12"

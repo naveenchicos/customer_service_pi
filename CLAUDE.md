@@ -187,6 +187,53 @@ SQLAlchemy `Mapped[X | None]` annotations break on Python 3.14 due to a `Union._
 - **Retry policy:** Never retry on `500` (application errors); only on `503`, `504`, `connection-error`, `reset`. Max 2 attempts.
 - **Holiday incident pattern:** No timeouts on outbound calls → one slow Redis response blocks all threads → OL receives requests but nothing reaches downstream. Always add `asyncio.wait_for` + `@circuit` on every client call.
 
+## Branching strategy
+
+### Branch naming
+
+| Branch | Purpose |
+| ------ | ------- |
+| `main` | Production history — only receives merges from `release/*` via CD pipeline |
+| `develop` | Integration branch — all feature/bugfix work lands here via PR |
+| `feature/<short-desc>` | New work branched from `develop` |
+| `bugfix/<short-desc>` | Non-urgent fixes branched from `develop` |
+| `release/vX.Y.Z` | Release candidate — branched from `develop`, triggers CD to production |
+| `hotfix/<short-desc>` | Urgent prod fix — branched from `main`, merged to both `main` and `develop` |
+
+### PR workflow
+
+```text
+feature/* or bugfix/*  →  PR (squash merge)  →  develop
+develop                →  create release/vX.Y.Z branch
+release/vX.Y.Z push   →  CD: test → build → deploy production → merge → main → tag vX.Y.Z
+```
+
+1. Branch from `develop`: `git checkout -b feature/my-thing develop`
+2. Push and open PR targeting `develop`
+3. CI runs automatically (lint, type-check, unit tests)
+4. 1 approval required; squash merge after CI passes
+5. To release: `git checkout -b release/v1.2.3 develop && git push`
+6. CD pipeline deploys; after smoke test passes it auto-merges `release/v1.2.3` → `main` and tags `v1.2.3`
+
+### Hotfix workflow
+
+```text
+main  →  hotfix/*  →  PR  →  main  (direct, no develop gate)
+hotfix/*            →  also PR  →  develop  (back-merge to keep histories in sync)
+```
+
+### Merge strategy
+
+- PRs into `develop`: **squash merge** (one clean commit per feature)
+- Release into `main`: **regular merge** (preserves release commit history, `--no-ff`)
+- Hotfix into `main`: **regular merge**
+- Hotfix back into `develop`: **regular merge**
+
+### Branch protection summary
+
+- `develop`: require PR + 1 approval + CI status check (`lint-and-test`); no force-push
+- `main`: no direct pushes; only CD pipeline (`github-actions[bot]`) may push; no force-push
+
 ## Skills (load when relevant)
 
 - **Deploying to GKE:** read `.claude/skills/gke-deploy_SKILL.md`
