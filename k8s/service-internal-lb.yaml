@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ol-service-ilb
+  namespace: production
+  annotations:
+    # Internal Load Balancer — accessible from within the VPC (including Apigee X).
+    # Not exposed to the public internet.
+    networking.gke.io/load-balancer-type: "Internal"
+spec:
+  type: LoadBalancer
+  selector:
+    app: ol-service
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8000
+      protocol: TCP

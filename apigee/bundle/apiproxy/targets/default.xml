@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+  Target endpoint — forwards requests from Apigee to the GKE internal load balancer.
+
+  10.128.0.5 is the Internal Load Balancer IP for ol-service-ilb in the production namespace.
+  Update this IP if the ILB is recreated:
+    kubectl get svc ol-service-ilb -n production -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+-->
+<TargetEndpoint name="default">
+  <PreFlow name="PreFlow">
+    <Request/>
+    <Response/>
+  </PreFlow>
+  <HTTPTargetConnection>
+    <URL>http://10.128.0.5:80</URL>
+  </HTTPTargetConnection>
+</TargetEndpoint>

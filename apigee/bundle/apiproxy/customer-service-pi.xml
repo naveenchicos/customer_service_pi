@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<APIProxy name="customer-service-pi" revision="1">
+  <DisplayName>Customer Service Pi</DisplayName>
+  <Description>OAuth 2.0 proxy for the Customer Service Pi GKE service</Description>
+  <BasePaths>/v1/customer-service</BasePaths>
+</APIProxy>

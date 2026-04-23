@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+  Validates the Bearer token on every inbound request (except /oauth/token).
+
+  Attach to the Proxy Endpoint PreFlow Request flow.
+  Add a condition to skip it for the token endpoint:
+    (proxy.pathsuffix != "/oauth/token")
+
+  On success: flow variables client_id, developer.app.name, etc. are populated.
+  On failure: Apigee returns 401 before the request reaches GKE.
+
+  The AssignMessage-InjectCaller policy runs after this to forward client_id
+  to the backend as X-Caller-Identity.
+-->
+<OAuthV2 name="OAuthV2-VerifyToken">
+  <DisplayName>Verify OAuth Token</DisplayName>
+  <Operation>VerifyAccessToken</Operation>
+</OAuthV2>
