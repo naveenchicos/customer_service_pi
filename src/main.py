@@ -9,7 +9,8 @@ Startup order (lifespan):
 Middleware execution order (request → response):
   CorrelationIdMiddleware   ← outermost; sets request.state.correlation_id first
   SecurityHeadersMiddleware ← adds OWASP headers to every response
-  ApiKeyAuthMiddleware      ← validates API key; reads correlation_id set above
+  CallerIdentityMiddleware  ← production: requires X-Caller-Identity (set by Apigee)
+                               local/staging: requires X-API-Key
 
 OpenAPI docs are disabled in production (OWASP A05).
 """
@@ -25,7 +26,7 @@ from fastapi.responses import JSONResponse
 
 from src.clients.customer_client import close_customer_client, init_customer_client
 from src.config import Environment, get_settings
-from src.middleware.api_key_auth import ApiKeyAuthMiddleware
+from src.middleware.caller_identity_auth import CallerIdentityMiddleware
 from src.middleware.correlation_id import CorrelationIdMiddleware
 from src.middleware.security_headers import SecurityHeadersMiddleware
 from src.routers import accounts, health
@@ -85,7 +86,9 @@ def create_app() -> FastAPI:
         description=(
             "Account management API — create, update, look up, and manage customer accounts.\n\n"
             "## Authentication\n"
-            "All endpoints (except `/health`) require an `X-API-Key` header.\n\n"
+            "All endpoints (except `/health`) require an `Authorization: Bearer <token>` header.\n"
+            "Obtain a token from `POST /oauth/token` via Apigee (client credentials flow).\n"
+            "In local/staging environments an `X-API-Key` header is accepted instead.\n\n"
             "## Pagination\n"
             "`GET /accounts` returns paginated results. "
             "Use `page` and `page_size` query params.\n\n"
@@ -109,7 +112,7 @@ def create_app() -> FastAPI:
     # ── Middleware (added in reverse execution order — last added = outermost) ──
     app.add_middleware(CorrelationIdMiddleware)
     app.add_middleware(SecurityHeadersMiddleware)
-    app.add_middleware(ApiKeyAuthMiddleware)
+    app.add_middleware(CallerIdentityMiddleware)
 
     # CORS — locked down for an internal API
     app.add_middleware(
@@ -118,7 +121,8 @@ def create_app() -> FastAPI:
         allow_credentials=False,
         allow_methods=["GET", "POST", "PATCH", "DELETE"],
         allow_headers=[
-            "X-API-Key",
+            "Authorization",
+            "X-API-Key",  # local/staging fallback
             "X-Correlation-ID",
             "X-Caller-Identity",
             "Content-Type",

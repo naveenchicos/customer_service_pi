@@ -172,6 +172,8 @@ jobs:
           cluster_name: ${{ env.GKE_CLUSTER }}
           location: ${{ env.GKE_REGION }}
 
+      # Staging uses X-API-Key auth (no Apigee in front).
+      # Ensure ol-service-secrets in the staging namespace contains api-key.
       - name: Update deployment image tag
         run: |
           IMAGE_TAG=${{ needs.build-push.outputs.image_tag }}

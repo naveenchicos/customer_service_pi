@@ -52,7 +52,7 @@ def _breaker_state(fn: object) -> str:
 async def health() -> HealthResponse:
     """
     Simple liveness check — returns 200 if the process is running.
-    GKE kubelet calls this; it must not require authentication (exempt in api_key_auth.py).
+    GKE kubelet calls this; it must not require authentication (exempt in CallerIdentityMiddleware).
     """
     return HealthResponse(status="ok")
 

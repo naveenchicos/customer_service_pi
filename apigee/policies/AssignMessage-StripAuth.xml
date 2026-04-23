@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+  Strips the Authorization header before forwarding to the GKE backend.
+
+  Attach AFTER AssignMessage-InjectCaller in the PreFlow Request flow.
+
+  Reasons:
+  1. The Bearer token is already validated — no need to forward it.
+  2. Prevents the token from appearing in backend access logs.
+  3. The backend does not (and should not) know how to validate Apigee tokens;
+     it trusts X-Caller-Identity set by this proxy instead.
+-->
+<AssignMessage name="AssignMessage-StripAuth">
+  <DisplayName>Strip Authorization Header</DisplayName>
+  <Remove>
+    <Headers>
+      <Header name="Authorization"/>
+    </Headers>
+  </Remove>
+  <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+  <AssignTo createNew="false" type="request"/>
+</AssignMessage>

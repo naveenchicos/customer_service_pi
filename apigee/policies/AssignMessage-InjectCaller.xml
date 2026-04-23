@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+  After token verification, injects the authenticated client_id as a header
+  so the backend service knows who made the call without re-validating the token.
+
+  Attach AFTER OAuthV2-VerifyToken in the same PreFlow Request flow.
+
+  The backend CallerIdentityMiddleware checks for this header in production.
+  If it is absent (i.e. request bypassed Apigee), the backend returns 401.
+-->
+<AssignMessage name="AssignMessage-InjectCaller">
+  <DisplayName>Inject X-Caller-Identity</DisplayName>
+  <Set>
+    <Headers>
+      <Header name="X-Caller-Identity">{client_id}</Header>
+    </Headers>
+  </Set>
+  <IgnoreUnresolvedVariables>false</IgnoreUnresolvedVariables>
+  <AssignTo createNew="false" type="request"/>
+</AssignMessage>

@@ -43,11 +43,8 @@ spec:
                   key: database-url
             - name: CUSTOMER_SERVICE_URL
               value: "http://customer-service.production.svc.cluster.local"
-            - name: API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: ol-service-secrets
-                  key: api-key
+            # API_KEY not set in production — Apigee validates Bearer tokens.
+            # Set API_KEY only in staging/local deployments.
             - name: LOG_LEVEL
               value: "INFO"
             - name: CIRCUIT_BREAKER_THRESHOLD

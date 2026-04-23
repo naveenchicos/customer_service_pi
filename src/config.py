@@ -6,6 +6,7 @@ with a clear message rather than failing silently at runtime.
 
 from enum import Enum
 from functools import lru_cache
+from typing import Optional
 
 from pydantic import AnyHttpUrl, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -61,15 +62,27 @@ class Settings(BaseSettings):
     )
 
     # ── Security ─────────────────────────────────────────────────────────────
-    api_key: SecretStr = Field(
-        ...,
-        description="Shared API key validated on every request (OWASP A07)",
+    # Required in local/staging (X-API-Key fallback). Not used in production —
+    # Apigee validates the Bearer token before the request reaches GKE.
+    api_key: Optional[SecretStr] = Field(
+        default=None,
+        description="API key for local/staging auth. Not required in production.",
     )
 
     # ── Observability ─────────────────────────────────────────────────────────
     log_level: str = Field(default="INFO")
     service_name: str = Field(default="customer-service-pi")
     service_version: str = Field(default="1.0.0")
+
+    @field_validator("api_key", mode="after")
+    @classmethod
+    def api_key_required_outside_production(
+        cls, v: Optional[SecretStr], info: object
+    ) -> Optional[SecretStr]:
+        env = getattr(info, "data", {}).get("environment", Environment.LOCAL)
+        if env != Environment.PRODUCTION and v is None:
+            raise ValueError("API_KEY is required in local and staging environments")
+        return v
 
     @field_validator("database_url")
     @classmethod
