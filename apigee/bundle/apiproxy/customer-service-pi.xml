@@ -2,5 +2,5 @@
 <APIProxy name="customer-service-pi" revision="1">
   <DisplayName>Customer Service Pi</DisplayName>
   <Description>OAuth 2.0 proxy for the Customer Service Pi GKE service</Description>
-  <BasePaths>/v1/customer-service</BasePaths>
+  <BasePaths>/v1/piapp</BasePaths>
 </APIProxy>
