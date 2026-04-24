@@ -77,7 +77,7 @@ Store these — they replace the static `API_KEY` used by service consumers.
 CLIENT_ID="<from Apigee App>"
 CLIENT_SECRET="<from Apigee App>"
 
-curl -s -X POST https://<apigee-host>/v1/customer-service/oauth/token \
+curl -s -X POST https://<apigee-host>/v1/piapp/oauth/token \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -u "$CLIENT_ID:$CLIENT_SECRET" \
   -d "grant_type=client_credentials" | jq .
@@ -97,7 +97,7 @@ Response:
 ```bash
 TOKEN="<access_token from above>"
 
-curl -s https://<apigee-host>/v1/customer-service/accounts \
+curl -s https://<apigee-host>/v1/piapp/accounts \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Correlation-ID: my-trace-id" | jq .
 ```

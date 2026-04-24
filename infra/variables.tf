@@ -17,3 +17,9 @@ variable "db_password" {
   # Set via: export TF_VAR_db_password="..."
   # Or pass on the CLI: terraform apply -var="db_password=..."
 }
+
+variable "sql_active" {
+  description = "Set to false to stop Cloud SQL (saves compute cost; storage charges still apply)"
+  type        = bool
+  default     = true
+}
