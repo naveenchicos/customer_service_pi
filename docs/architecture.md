@@ -52,7 +52,7 @@ Internet
 | **Global External LB** | Cloud Load Balancing | Terminates TLS, receives public traffic | Static IP `34.107.235.25`; HTTPS only |
 | **Google Managed SSL Cert** | Certificate Manager | Provisions and auto-renews TLS cert | Domain: `api.34-107-235-25.nip.io` (nip.io = no DNS registration needed) |
 | **PSC NEG** | Private Service Connect NEG | Routes LB traffic into Apigee's VPC without public exposure | Points to Apigee X service attachment |
-| **Apigee X** | API Gateway | OAuth 2.0 token issuance and verification; rate limiting; caller identity injection | Org: `pi-dev-ai-493823`; Env: `eval`; Base path: `/v1/customer-service` |
+| **Apigee X** | API Gateway | OAuth 2.0 token issuance and verification; rate limiting; caller identity injection | Org: `pi-dev-ai-493823`; Env: `eval`; Base path: `/v1/piapp` |
 | **Apigee API Product** | Apigee | Defines what paths and operations are allowed | `customer-service-pi-product`; `apiResources: []` = all paths |
 | **Apigee App** | Apigee | Issues `client_id` / `client_secret` to callers | `customer-service-pi-app` |
 | **Internal Load Balancer** | Cloud Load Balancing | Routes Apigee traffic to GKE pods inside VPC | `ol-service-ilb`; IP `10.128.0.5`; port 80→8000 |
@@ -73,7 +73,7 @@ Used once before making API calls. Token is valid for 1 hour.
 ```
 Client
   │
-  │  POST https://api.34-107-235-25.nip.io/v1/customer-service/oauth/token
+  │  POST https://api.34-107-235-25.nip.io/v1/piapp/oauth/token
   │  Authorization: Basic base64(client_id:client_secret)
   │  Body: grant_type=client_credentials
   │
@@ -106,7 +106,7 @@ Response back to client:
 ```
 Client
   │
-  │  GET https://api.34-107-235-25.nip.io/v1/customer-service/accounts
+  │  GET https://api.34-107-235-25.nip.io/v1/piapp/accounts
   │  Authorization: Bearer <access_token>
   │
   ▼
@@ -296,7 +296,7 @@ Cloud SQL
 
 | Item | Value |
 |------|-------|
-| Public base URL | `https://api.34-107-235-25.nip.io/v1/customer-service` |
+| Public base URL | `https://api.34-107-235-25.nip.io/v1/piapp` |
 | OAuth token endpoint | `POST /oauth/token` |
 | Internal LB IP | `10.128.0.5:80` |
 | GKE cluster | `ol-cluster`, region `us-central1` |
