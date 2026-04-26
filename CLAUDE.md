@@ -105,6 +105,11 @@ Apigee → GKE Gateway (3s timeout) → CorrelationIdMiddleware → SecurityHead
 | GET | `/accounts/by-customer/{number}` | Get by customer number |
 | PATCH | `/accounts/{id}` | Partial update (only provided fields change) |
 | DELETE | `/accounts/{id}` | Soft-delete (sets status=inactive) |
+| POST | `/accounts/{id}/addresses` | Add an address (max 10 active per account; 409 on duplicate dedup_key) |
+| GET | `/accounts/{id}/addresses` | List active addresses (no pagination — capped at 10) |
+| GET | `/accounts/{id}/addresses/{address_id}` | Get a specific address by UUID |
+| PATCH | `/accounts/{id}/addresses/{address_id}` | Partial update (recomputes dedup_key) |
+| DELETE | `/accounts/{id}/addresses/{address_id}` | Soft-delete (clears matching account default-address pointers) |
 | GET | `/health` | Liveness probe |
 | GET | `/health/dependencies` | Circuit breaker state for all downstream clients |
 
