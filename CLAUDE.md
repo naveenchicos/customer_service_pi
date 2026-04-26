@@ -246,6 +246,12 @@ hotfix/*            →  also PR  →  develop  (back-merge to keep histories in
 - **Adding resilience (circuit breaker, timeouts, retry):** read `.claude/skills/resilience_SKILL.md`
 - **Write CI/CD pipelines:** use GitHub Actions
 
+## Linting & type-checking
+
+- Run `flake8 src/ tests/`, `mypy src/`, and `black src/ tests/` after Python changes; fix all issues with real fixes.
+- No `# noqa` or `# type: ignore` silencers without explicit user approval. Two pre-approved exceptions are documented in Gotchas: Pydantic Settings `# type: ignore[call-arg]` and the `circuitbreaker` stub suppression in `setup.cfg`.
+- Aim for clean lint scores before considering a task complete.
+
 ## Rules
 
 - Never change scripts without approval. Root cause first, then wait for go-ahead.
