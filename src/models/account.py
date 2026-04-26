@@ -9,13 +9,16 @@ Soft-delete via `status` field; records are never physically deleted.
 import uuid
 from datetime import datetime, timezone
 from enum import Enum as PyEnum
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import DateTime, Index, String, text
+from sqlalchemy import DateTime, ForeignKey, Index, String, text
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.db import Base
+
+if TYPE_CHECKING:
+    from src.models.address import Address
 
 
 class AccountStatus(str, PyEnum):
@@ -65,6 +68,36 @@ class Account(Base):
         default=AccountStatus.ACTIVE,
         server_default="active",
         index=True,
+    )
+
+    # ── Default address pointers ──────────────────────────────────────────────
+    # FKs use use_alter=True because addresses.account_id → accounts.id forms a
+    # cycle; the constraints are emitted via ALTER after both tables exist.
+    default_shipping_address_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey(
+            "addresses.id",
+            ondelete="SET NULL",
+            use_alter=True,
+            name="fk_accounts_default_shipping_address_id",
+        ),
+        nullable=True,
+    )
+    default_billing_address_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey(
+            "addresses.id",
+            ondelete="SET NULL",
+            use_alter=True,
+            name="fk_accounts_default_billing_address_id",
+        ),
+        nullable=True,
+    )
+
+    addresses: Mapped[list["Address"]] = relationship(
+        "Address",
+        back_populates="account",
+        foreign_keys="Address.account_id",
     )
 
     # ── Audit ─────────────────────────────────────────────────────────────────

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // empty' | { read -r f; if [[ \"$f\" == *.py && ( \"$f\" == */src/* || \"$f\" == */tests/* ) ]]; then /Users/naveenvallurupalli/myprojects/customer_service_pi/.venv/bin/flake8 \"$f\" || true; fi; }"
+          }
+        ]
+      }
+    ]
+  }
+}

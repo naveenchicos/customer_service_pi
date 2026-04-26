@@ -29,7 +29,7 @@ from src.config import Environment, get_settings
 from src.middleware.caller_identity_auth import CallerIdentityMiddleware
 from src.middleware.correlation_id import CorrelationIdMiddleware
 from src.middleware.security_headers import SecurityHeadersMiddleware
-from src.routers import accounts, health
+from src.routers import accounts, addresses, health
 
 settings = get_settings()
 
@@ -131,6 +131,7 @@ def create_app() -> FastAPI:
 
     # ── Routers ───────────────────────────────────────────────────────────────
     app.include_router(accounts.router)
+    app.include_router(addresses.router)
     app.include_router(health.router)
 
     # ── Exception handlers ────────────────────────────────────────────────────
