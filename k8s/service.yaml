@@ -1,14 +1,14 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: ol-service
+  name: customer-service-pi
   namespace: production
   labels:
-    app: ol-service
+    app: customer-service-pi
 spec:
   type: ClusterIP
   selector:
-    app: ol-service
+    app: customer-service-pi
   ports:
     - name: http
       protocol: TCP
@@ -20,15 +20,15 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: ol-service-canary
+  name: customer-service-pi-canary
   namespace: production
   labels:
-    app: ol-service
+    app: customer-service-pi
     track: canary
 spec:
   type: ClusterIP
   selector:
-    app: ol-service
+    app: customer-service-pi
     track: canary
   ports:
     - name: http
