@@ -73,7 +73,7 @@ src/
   middleware/
     correlation_id.py   # Injects X-Correlation-ID on every request (generates if absent)
     security_headers.py # OWASP A05 headers: CSP, HSTS, X-Frame-Options, etc.
-    api_key_auth.py     # OWASP A07: constant-time X-API-Key validation; /health exempt
+    caller_identity_auth.py  # Production: requires X-Caller-Identity (set by Apigee); local/staging: X-API-Key fallback
   models/
     account.py          # SQLAlchemy ORM — accounts table, UUID PK, soft-delete via status
   schemas/
@@ -91,7 +91,7 @@ src/
 
 ```text
 Apigee → GKE Gateway (3s timeout) → CorrelationIdMiddleware → SecurityHeadersMiddleware
-  → ApiKeyAuthMiddleware → Router → Service → DB (Cloud SQL via Auth Proxy)
+  → CallerIdentityMiddleware → Router → Service → DB (Cloud SQL via Auth Proxy)
                                              ↘ Customer Service client (500ms, circuit breaker)
 ```
 
@@ -105,6 +105,11 @@ Apigee → GKE Gateway (3s timeout) → CorrelationIdMiddleware → SecurityHead
 | GET | `/accounts/by-customer/{number}` | Get by customer number |
 | PATCH | `/accounts/{id}` | Partial update (only provided fields change) |
 | DELETE | `/accounts/{id}` | Soft-delete (sets status=inactive) |
+| POST | `/accounts/{id}/addresses` | Add an address (max 10 active per account; 409 on duplicate dedup_key) |
+| GET | `/accounts/{id}/addresses` | List active addresses (no pagination — capped at 10) |
+| GET | `/accounts/{id}/addresses/{address_id}` | Get a specific address by UUID |
+| PATCH | `/accounts/{id}/addresses/{address_id}` | Partial update (recomputes dedup_key) |
+| DELETE | `/accounts/{id}/addresses/{address_id}` | Soft-delete (clears matching account default-address pointers) |
 | GET | `/health` | Liveness probe |
 | GET | `/health/dependencies` | Circuit breaker state for all downstream clients |
 
@@ -118,7 +123,7 @@ Interactive docs available at `/docs` in `local` and `staging` environments only
 | A01 Broken Access Control | UUID PKs (no sequential IDs); soft-delete preserves audit trail |
 | A03 Injection | Pydantic field validators (regex, length bounds, control-char check); SQLAlchemy ORM parameterised queries |
 | A05 Security Misconfiguration | `SecurityHeadersMiddleware` (CSP, HSTS, X-Frame-Options, nosniff); `/docs` disabled in production; non-root container user; `readOnlyRootFilesystem: true` in K8s |
-| A07 Auth Failures | `ApiKeyAuthMiddleware` with `hmac.compare_digest` (timing-safe); `SecretStr` in config |
+| A07 Auth Failures | `CallerIdentityMiddleware` — production enforces `X-Caller-Identity` (Apigee-injected); local/staging uses `hmac.compare_digest` X-API-Key fallback; `SecretStr` in config |
 | A09 Logging Failures | Structured JSON logs; `X-Correlation-ID` on every request; stack traces logged server-side only, never in responses |
 
 ### Client / resilience pattern
@@ -240,6 +245,12 @@ hotfix/*            →  also PR  →  develop  (back-merge to keep histories in
 - **Writing/updating K8s Gateway YAML:** read `.claude/skills/gateway-yaml_SKILL.md`
 - **Adding resilience (circuit breaker, timeouts, retry):** read `.claude/skills/resilience_SKILL.md`
 - **Write CI/CD pipelines:** use GitHub Actions
+
+## Linting & type-checking
+
+- Run `flake8 src/ tests/`, `mypy src/`, and `black src/ tests/` after Python changes; fix all issues with real fixes.
+- No `# noqa` or `# type: ignore` silencers without explicit user approval. Two pre-approved exceptions are documented in Gotchas: Pydantic Settings `# type: ignore[call-arg]` and the `circuitbreaker` stub suppression in `setup.cfg`.
+- Aim for clean lint scores before considering a task complete.
 
 ## Rules
 

@@ -36,7 +36,7 @@
   </PreFlow>
 
   <HTTPProxyConnection>
-    <BasePath>/v1/customer-service</BasePath>
+    <BasePath>/v1/piapp</BasePath>
     <VirtualHost>secure</VirtualHost>
   </HTTPProxyConnection>
 

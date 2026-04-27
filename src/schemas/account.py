@@ -152,6 +152,8 @@ class AccountResponse(BaseModel):
     email: str
     phone: str | None
     status: AccountStatus
+    default_shipping_address_id: uuid.UUID | None = None
+    default_billing_address_id: uuid.UUID | None = None
     created_at: datetime
     updated_at: datetime
     created_by: str | None

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Customer Service Pi",
-    "description": "Account management API \u2014 create, update, look up, and manage customer accounts.\n\n## Authentication\nAll endpoints (except `/health`) require an `X-API-Key` header.\n\n## Pagination\n`GET /accounts` returns paginated results. Use `page` and `page_size` query params.\n\n## Correlation IDs\nEvery request and response carries an `X-Correlation-ID` header. Include this value when raising support tickets or searching logs.",
+    "description": "Account management API \u2014 create, update, look up, and manage customer accounts.\n\n## Authentication\nAll endpoints (except `/health`) require an `Authorization: Bearer <token>` header.\nObtain a token from `POST /oauth/token` via Apigee (client credentials flow).\nIn local/staging environments an `X-API-Key` header is accepted instead.\n\n## Pagination\n`GET /accounts` returns paginated results. Use `page` and `page_size` query params.\n\n## Correlation IDs\nEvery request and response carries an `X-Correlation-ID` header. Include this value when raising support tickets or searching logs.",
     "contact": {
       "name": "Platform Engineering",
       "email": "platform@example.com"
@@ -395,6 +395,364 @@
         }
       }
     },
+    "/accounts/{account_id}/addresses": {
+      "post": {
+        "tags": [
+          "Addresses"
+        ],
+        "summary": "Add an address to an account",
+        "description": "Create a new address attached to an account.\n\nBehaviour:\n  - At most 10 active addresses per account.\n  - Duplicate detection: same building/apartment/city/state/zip = 409 Conflict.\n  - When **billing_same_as_shipping** is true, both\n    `default_shipping_address_id` and `default_billing_address_id` on the\n    parent account are set to this address \u2014 overwriting any existing values.",
+        "operationId": "create_address_accounts__account_id__addresses_post",
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Account Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddressCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The newly created address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddressResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unsupported country or invalid postal code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Duplicate address or 10-address limit reached",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error in request body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Addresses"
+        ],
+        "summary": "List active addresses for an account",
+        "description": "List all active addresses for the account, ordered by creation time (oldest first).",
+        "operationId": "list_addresses_accounts__account_id__addresses_get",
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Account Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "All active addresses (max 10) for the account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AddressResponse"
+                  },
+                  "title": "Response List Addresses Accounts  Account Id  Addresses Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/accounts/{account_id}/addresses/{address_id}": {
+      "get": {
+        "tags": [
+          "Addresses"
+        ],
+        "summary": "Get a specific address",
+        "description": "Fetch a single address by its UUID.",
+        "operationId": "get_address_accounts__account_id__addresses__address_id__get",
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Account Id"
+            }
+          },
+          {
+            "name": "address_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Address Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddressResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or address not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Addresses"
+        ],
+        "summary": "Partially update an address",
+        "description": "Partial update.\n\n- Only fields present in the body are modified.\n- **billing_same_as_shipping=true** repoints both account default FKs to\n  this address (same semantics as on create).",
+        "operationId": "update_address_accounts__account_id__addresses__address_id__patch",
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Account Id"
+            }
+          },
+          {
+            "name": "address_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Address Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddressUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddressResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unsupported country or invalid postal code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or address not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Duplicate address after update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No updatable fields provided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Addresses"
+        ],
+        "summary": "Soft-delete an address",
+        "description": "Soft-delete by setting status=inactive.\n\nAlso clears any default-shipping or default-billing pointer on the parent\naccount that references this address.",
+        "operationId": "soft_delete_address_accounts__account_id__addresses__address_id__delete",
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Account Id"
+            }
+          },
+          {
+            "name": "address_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Address Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The deleted address (status=inactive)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddressResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or address not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "tags": [
@@ -402,7 +760,7 @@
           "Health"
         ],
         "summary": "Liveness probe",
-        "description": "Simple liveness check \u2014 returns 200 if the process is running.\nGKE kubelet calls this; it must not require authentication (exempt in api_key_auth.py).",
+        "description": "Simple liveness check \u2014 returns 200 if the process is running.\nGKE kubelet calls this; it must not require authentication (exempt in CallerIdentityMiddleware).",
         "operationId": "health_health_get",
         "responses": {
           "200": {
@@ -548,6 +906,30 @@
           },
           "status": {
             "$ref": "#/components/schemas/AccountStatus"
+          },
+          "default_shipping_address_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Shipping Address Id"
+          },
+          "default_billing_address_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Billing Address Id"
           },
           "created_at": {
             "type": "string",
@@ -734,6 +1116,259 @@
         "type": "object",
         "title": "AccountUpdate",
         "description": "Payload for PATCH /accounts/{id}.\nAll fields optional \u2014 only provided fields are updated (true partial update)."
+      },
+      "AddressCreate": {
+        "properties": {
+          "line1": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Line1",
+            "examples": [
+              "123 Main St"
+            ]
+          },
+          "line2": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line2",
+            "examples": [
+              "Apt 3A"
+            ]
+          },
+          "city": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "City",
+            "examples": [
+              "Boston"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "State",
+            "examples": [
+              "MA"
+            ]
+          },
+          "postal_code": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Postal Code",
+            "examples": [
+              "02101"
+            ]
+          },
+          "country": {
+            "type": "string",
+            "maxLength": 3,
+            "minLength": 3,
+            "title": "Country",
+            "description": "ISO 3166-1 alpha-3 country code (e.g. USA)",
+            "examples": [
+              "USA"
+            ]
+          },
+          "billing_same_as_shipping": {
+            "type": "boolean",
+            "title": "Billing Same As Shipping",
+            "description": "When true, sets BOTH default_shipping_address_id and default_billing_address_id on the parent account to this address.",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "line1",
+          "city",
+          "state",
+          "postal_code",
+          "country"
+        ],
+        "title": "AddressCreate",
+        "description": "Payload for POST /accounts/{id}/addresses."
+      },
+      "AddressResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "account_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Account Id"
+          },
+          "line1": {
+            "type": "string",
+            "title": "Line1"
+          },
+          "line2": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line2"
+          },
+          "city": {
+            "type": "string",
+            "title": "City"
+          },
+          "state": {
+            "type": "string",
+            "title": "State"
+          },
+          "postal_code": {
+            "type": "string",
+            "title": "Postal Code"
+          },
+          "country": {
+            "type": "string",
+            "title": "Country"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AddressStatus"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "account_id",
+          "line1",
+          "line2",
+          "city",
+          "state",
+          "postal_code",
+          "country",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "AddressResponse",
+        "description": "Address representation returned by all read/write endpoints.\n\nExcludes ``dedup_key`` (internal) and any ``address_type`` (not stored)."
+      },
+      "AddressStatus": {
+        "type": "string",
+        "enum": [
+          "active",
+          "inactive"
+        ],
+        "title": "AddressStatus"
+      },
+      "AddressUpdate": {
+        "properties": {
+          "line1": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line1"
+          },
+          "line2": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line2"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "postal_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postal Code"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 3,
+                "minLength": 3
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country"
+          },
+          "billing_same_as_shipping": {
+            "type": "boolean",
+            "title": "Billing Same As Shipping",
+            "description": "When true, sets BOTH default_shipping_address_id and default_billing_address_id on the parent account to this address.",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "AddressUpdate",
+        "description": "Payload for PATCH /accounts/{id}/addresses/{address_id}.\nAll fields optional \u2014 only provided fields are updated."
       },
       "DependenciesResponse": {
         "properties": {

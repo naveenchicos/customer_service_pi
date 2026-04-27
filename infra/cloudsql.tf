@@ -24,6 +24,7 @@ resource "google_sql_database_instance" "py_dev_ai" {
     tier              = "db-perf-optimized-N-8"
     edition           = "ENTERPRISE_PLUS"
     availability_type = "ZONAL"
+    activation_policy = var.sql_active ? "ALWAYS" : "NEVER"
 
     disk_type             = "PD_SSD"
     disk_size             = 100

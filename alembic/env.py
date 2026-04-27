@@ -41,6 +41,7 @@ if alembic_config.config_file_name is not None:
 # Adding a new model? Import it here.
 from src.db import Base  # noqa: E402
 from src.models.account import Account  # noqa: E402, F401
+from src.models.address import Address  # noqa: E402, F401
 from src.config import get_settings  # noqa: E402
 
 # Override sqlalchemy.url with the value from application settings
