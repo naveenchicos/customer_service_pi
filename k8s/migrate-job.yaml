@@ -1,0 +1,118 @@
+# One-shot Kubernetes Job that runs `alembic upgrade head` against Cloud SQL
+# using the same image (and cloud-sql-proxy sidecar) as the application.
+#
+# Applied by the CD pipeline BEFORE `kubectl set image` — if the migration
+# fails, the workflow fails and no new code is rolled out.
+#
+# Image tag is templated. Substitute ${IMAGE_FULL} (full image path with tag)
+# in the pipeline before `kubectl apply`, e.g.:
+#
+#   envsubst < k8s/migrate-job.yaml | kubectl apply -f -
+#
+# Uses native sidecar (initContainer with restartPolicy: Always, K8s 1.29+ GA,
+# beta in 1.28). The proxy is auto-terminated when the alembic container exits,
+# so the Job completes cleanly. GKE Autopilot supports this.
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  generateName: customer-service-pi-migrate-
+  namespace: production
+  labels:
+    # NB: do NOT use `app: customer-service-pi` here — the smoke test in
+    # cd.yaml selects on that label and would block waiting for this Job's
+    # pod to become Ready (Job pods Complete; they never reach Ready).
+    app: customer-service-pi-migrate
+    job-type: migration
+spec:
+  backoffLimit: 0           # do not retry on failure — fail fast in CD
+  ttlSecondsAfterFinished: 600   # auto-clean Job + pods 10 min after completion
+  template:
+    metadata:
+      labels:
+        app: customer-service-pi-migrate
+        job-type: migration
+    spec:
+      restartPolicy: Never
+
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+
+      initContainers:
+        # Native sidecar — starts before main containers, auto-terminated when
+        # main containers exit (because restartPolicy: Always inside the Job).
+        - name: cloud-sql-proxy
+          restartPolicy: Always
+          image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.14.0
+          args:
+            - "--structured-logs"
+            - "--port=5432"
+            - "pi-dev-ai-493823:us-central1:py-dev-ai"
+          env:
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: /secrets/cloudsql/key.json
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 65532
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
+          volumeMounts:
+            - name: cloud-sql-sa-key
+              mountPath: /secrets/cloudsql
+              readOnly: true
+
+      containers:
+        - name: alembic
+          image: ${IMAGE_FULL}
+          command: ["alembic", "upgrade", "head"]
+          env:
+            - name: ENVIRONMENT
+              value: "production"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: ol-service-secrets
+                  key: database-url
+            - name: CUSTOMER_SERVICE_URL
+              value: "http://customer-service.production.svc.cluster.local"
+            - name: LOG_LEVEL
+              value: "INFO"
+            - name: CIRCUIT_BREAKER_THRESHOLD
+              value: "5"
+            - name: CIRCUIT_BREAKER_RECOVERY
+              value: "30"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: cloud-sql-sa-key
+          secret:
+            secretName: cloud-sql-sa-key

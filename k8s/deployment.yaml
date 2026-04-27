@@ -1,20 +1,25 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ol-service
+  name: customer-service-pi
   namespace: production
   labels:
-    app: ol-service
+    app: customer-service-pi
     version: "1.0.0"
 spec:
-  replicas: 3  # HPA manages scaling; never drop below 3
+  replicas: 1  # HPA manages scaling between minReplicas=1 and maxReplicas=3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1          # bring up new pod before terminating old (no downtime with min=1)
+      maxUnavailable: 0
   selector:
     matchLabels:
-      app: ol-service
+      app: customer-service-pi
   template:
     metadata:
       labels:
-        app: ol-service
+        app: customer-service-pi
     spec:
       # ── Pod-level security context (OWASP A05) ────────────────────────────
       securityContext:
@@ -25,8 +30,8 @@ spec:
 
       containers:
         # ── Application container ─────────────────────────────────────────
-        - name: ol-service
-          image: us-central1-docker.pkg.dev/pi-dev-ai-493823/pydevrepo/ol-service:v1.0.0
+        - name: customer-service-pi
+          image: us-central1-docker.pkg.dev/pi-dev-ai-493823/pydevrepo/customer-service-pi:v1.0.0
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
@@ -136,4 +141,4 @@ spec:
           whenUnsatisfiable: DoNotSchedule
           labelSelector:
             matchLabels:
-              app: ol-service
+              app: customer-service-pi
