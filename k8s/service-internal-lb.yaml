@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: ol-service-ilb
+  name: customer-service-pi-ilb
   namespace: production
   annotations:
     # Internal Load Balancer — accessible from within the VPC (including Apigee X).
@@ -10,7 +10,7 @@ metadata:
 spec:
   type: LoadBalancer
   selector:
-    app: ol-service
+    app: customer-service-pi
   ports:
     - name: http
       port: 80

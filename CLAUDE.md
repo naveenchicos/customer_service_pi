@@ -55,10 +55,10 @@ with open('docs/openapi.json','w') as f: json.dump(create_app().openapi(), f, in
 "
 
 # Deploy (see Skills section)
-docker build -t us-central1-docker.pkg.dev/pi-dev-ai-493823/pydevrepo/ol-service:TAG .
-docker push us-central1-docker.pkg.dev/pi-dev-ai-493823/pydevrepo/ol-service:TAG
+docker build -t us-central1-docker.pkg.dev/pi-dev-ai-493823/pydevrepo/customer-service-pi:TAG .
+docker push us-central1-docker.pkg.dev/pi-dev-ai-493823/pydevrepo/customer-service-pi:TAG
 kubectl apply -f k8s/ -n production
-kubectl rollout status deployment/ol-service -n production --timeout=3m
+kubectl rollout status deployment/customer-service-pi -n production --timeout=3m
 ```
 
 ## Architecture
@@ -173,8 +173,8 @@ SQLAlchemy `Mapped[X | None]` annotations break on Python 3.14 due to a `Union._
 
 - **Cloud SQL:** Always connect via Auth Proxy sidecar — never direct IP. Sidecar listens on `localhost:5432`. If pods fail to start, check: `kubectl logs POD_NAME -c cloud-sql-proxy -n production`
 - **Cloud SQL Auth Proxy — GKE auth:** The proxy uses Application Default Credentials. Without Workload Identity, ADC resolves to the node compute SA which has no Cloud SQL access. Fix: mount SA key as K8s Secret (`cloud-sql-sa-key`) and set `GOOGLE_APPLICATION_CREDENTIALS=/secrets/cloudsql/key.json` on the proxy container. Diagnosis: `kubectl logs POD -c cloud-sql-proxy -n production` — a 403 `NOT_AUTHORIZED` means wrong credentials, not a network issue.
-- **Alembic migrations on GKE:** Run inside a pod, not locally against Cloud SQL: `kubectl exec -n production $(kubectl get pod -n production -l app=ol-service -o jsonpath='{.items[0].metadata.name}') -c ol-service -- alembic upgrade head`
-- **Artifact Registry repo name:** The actual repo is `pydevrepo` (not `ol-repo`). Full image path: `us-central1-docker.pkg.dev/pi-dev-ai-493823/pydevrepo/ol-service:TAG`
+- **Alembic migrations on GKE:** CD now runs migrations automatically via `k8s/migrate-job.yaml` (a one-shot Job using the new image, executed before `kubectl set image`). For ad-hoc manual runs, exec into a pod: `kubectl exec -n production $(kubectl get pod -n production -l app=customer-service-pi --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1].metadata.name}') -c customer-service-pi -- alembic upgrade head`
+- **Artifact Registry repo name:** The actual repo is `pydevrepo` (not `ol-repo`). Full image path: `us-central1-docker.pkg.dev/pi-dev-ai-493823/pydevrepo/customer-service-pi:TAG`. Tag scheme: `<VERSION>-<MMDDYYYYHHMMSS>` (e.g. `v1.2.0-04272026135730`) — set by CD from the `release/v*` branch name.
 - **Docker credential helper:** If `docker build` fails with `docker-credential-gcr: executable file not found`, check `~/.docker/config.json`. The entry `"https://index.docker.io/v1/": "gcr"` is wrong — change to `"desktop"`.
 - **CI/CD — flake8 line length:** Default is 79. Project uses 100 (`setup.cfg`). Always run `flake8 src/ tests/` and `black src/ tests/` locally before pushing.
 - **CI/CD — mypy + Pydantic Settings:** `get_settings()` returns `Settings()` which mypy flags as missing required args. Suppress with `# type: ignore[call-arg]` — Pydantic reads from env vars, not constructor args.
@@ -185,7 +185,7 @@ SQLAlchemy `Mapped[X | None]` annotations break on Python 3.14 due to a `Union._
 - **Apigee Spike Arrest:** 500 req/s. If traffic exceeds this, tune Apigee first — do not scale GKE pods.
 - **Namespace:** Production = `production`, staging = `staging`. Always verify before applying: `kubectl config current-context`
 - **Circuit breakers:** If a breaker is open, check `GET /health/dependencies` before restarting pods.
-- **HPA lag:** Min 3 replicas, scales on CPU. Pre-scale for peak events: `kubectl scale deployment/ol-service --replicas=15 -n production`
+- **HPA footprint:** Min 1 / Max 3 replicas, scales on CPU >60%. Deliberately small for cost in this environment. Single-pod restarts ride on `maxSurge=1, maxUnavailable=0` so rolling updates stay available. For peak load, raise the cap explicitly: `kubectl scale deployment/customer-service-pi --replicas=3 -n production` (or edit `hpa.yaml`).
 - **Correlation IDs:** `X-Correlation-ID` injected by middleware on every request. Always use it when searching Cloud Logging.
 - **Gateway timeout:** 3s total; `backendRequest` must always be less than `request` or the backend timeout never fires.
 - **HTTPRoute "Accepted" ≠ traffic flowing:** Always check `ResolvedRefs` condition too — a wrong backend service name gives `Accepted=True` but silently drops all traffic.
