@@ -199,16 +199,16 @@ SQLAlchemy `Mapped[X | None]` annotations break on Python 3.14 due to a `Union._
 | Branch | Purpose |
 | ------ | ------- |
 | `main` | Production history — only receives merges from `release/*` via CD pipeline |
-| `develop` | Integration branch — all feature/bugfix work lands here via PR |
+| `develop` | Integration branch — all feature/bug work lands here via PR |
 | `feature/<short-desc>` | New work branched from `develop` |
-| `bugfix/<short-desc>` | Non-urgent fixes branched from `develop` |
+| `bugs/<bug-nature>` | Non-urgent bug fixes branched from `develop`. Use a descriptive bug-nature so the work is trackable from the branch name (e.g. `bugs/migrate-job-label-collision`) |
 | `release/vX.Y.Z` | Release candidate — branched from `develop`, triggers CD to production |
 | `hotfix/<short-desc>` | Urgent prod fix — branched from `main`, merged to both `main` and `develop` |
 
 ### PR workflow
 
 ```text
-feature/* or bugfix/*  →  PR (squash merge)  →  develop
+feature/* or bugs/*    →  PR (squash merge)  →  develop
 develop                →  create release/vX.Y.Z branch
 release/vX.Y.Z push   →  CD: test → build → deploy production → merge → main → tag vX.Y.Z
 ```
