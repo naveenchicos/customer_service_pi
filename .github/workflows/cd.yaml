@@ -180,7 +180,16 @@ jobs:
       - name: Rollback on failure
         if: failure()
         run: |
-          echo "Deployment failed — rolling back"
+          echo "Deployment failed — attempting rollback"
+          # Skip rollback for a brand-new Deployment with no history
+          # (e.g. first deploy after a rename). `kubectl rollout undo`
+          # exits 1 in that case, which would mask the real failure.
+          REVS=$(kubectl rollout history deployment/customer-service-pi \
+            -n production --revision=0 2>/dev/null | grep -cE '^[0-9]+' || echo 0)
+          if [ "$REVS" -lt 2 ]; then
+            echo "No prior revision to roll back to (history=$REVS) — skipping undo"
+            exit 0
+          fi
           kubectl rollout undo deployment/customer-service-pi -n production
           kubectl rollout status deployment/customer-service-pi -n production --timeout=2m
 

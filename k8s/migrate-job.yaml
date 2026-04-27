@@ -19,7 +19,10 @@ metadata:
   generateName: customer-service-pi-migrate-
   namespace: production
   labels:
-    app: customer-service-pi
+    # NB: do NOT use `app: customer-service-pi` here — the smoke test in
+    # cd.yaml selects on that label and would block waiting for this Job's
+    # pod to become Ready (Job pods Complete; they never reach Ready).
+    app: customer-service-pi-migrate
     job-type: migration
 spec:
   backoffLimit: 0           # do not retry on failure — fail fast in CD
@@ -27,7 +30,7 @@ spec:
   template:
     metadata:
       labels:
-        app: customer-service-pi
+        app: customer-service-pi-migrate
         job-type: migration
     spec:
       restartPolicy: Never
